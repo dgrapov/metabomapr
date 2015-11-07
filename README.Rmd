@@ -1,0 +1,19 @@
+---
+output:
+  html_document:
+    keep_md: yes
+---
+
+### Install
+```{r,message=FALSE,warning=FALSE}
+#devtools::install_github("dgrapov/metabomapr")
+library("metabomapr")
+
+```
+
+### Examples
+#### Convert PubChem CID to tanimoto similarity adjacency matrix
+```{r,message=FALSE,warning=FALSE}
+cids<-c("[]","51", "440649","[]", "439161",  NA )
+CID_tanimoto(cids)
+```
