@@ -62,11 +62,32 @@ library(&quot;metabomapr&quot;)</code></pre>
 <div id="convert-pubchem-cid-to-tanimoto-similarity-adjacency-matrix" class="section level4">
 <h4>Convert PubChem CID to tanimoto similarity adjacency matrix</h4>
 <pre class="r"><code>cids&lt;-c(&quot;[]&quot;,&quot;51&quot;, &quot;440649&quot;,&quot;[]&quot;, &quot;439161&quot;,  NA )
-CID_tanimoto(cids)</code></pre>
+(res&lt;-CID_tanimoto(cids))</code></pre>
 <pre><code>##               51    440649   439161
 ## 51     1.0000000 0.1584699 0.171123
 ## 440649 0.1584699 1.0000000 0.646789
 ## 439161 0.1711230 0.6467890 1.000000</code></pre>
+</div>
+<div id="convert-adjacency-matrix-to-an-edge-list" class="section level4">
+<h4>Convert adjacency matrix to an edge list</h4>
+<pre class="r"><code>#extracted connections for an undirected an graph
+adjacency_edgeList(res)</code></pre>
+<pre><code>##   source target             value
+## 4     51 440649 0.158469945355191
+## 7     51 439161 0.171122994652406
+## 8 440649 439161 0.646788990825688</code></pre>
+<pre class="r"><code>#full matrix
+adjacency_edgeList(res,symmetric=FALSE,diagonal=TRUE)</code></pre>
+<pre><code>##   source target             value
+## 1     51     51                 1
+## 2 440649     51 0.158469945355191
+## 3 439161     51 0.171122994652406
+## 4     51 440649 0.158469945355191
+## 5 440649 440649                 1
+## 6 439161 440649 0.646788990825688
+## 7     51 439161 0.171122994652406
+## 8 440649 439161 0.646788990825688
+## 9 439161 439161                 1</code></pre>
 </div>
 </div>
 

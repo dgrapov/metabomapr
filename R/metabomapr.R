@@ -1,6 +1,6 @@
 #' @title CID_SDF
 #' @param cid list of PubChem identifiers
-#' @import dplyr
+#' @import dplyr ChemmineR 
 CID_SDF<-function(cids,query.limit=25,...){
   
   #retrieve metabolite SDF from DB
@@ -59,6 +59,7 @@ read_sdf<-function (sdfstr) {
   #mysdf_list <- new("SDFstr", a = mysdf_list)
   return(mysdf_list)
 }
+
 #' @import ChemmineR
 SDF_tanimoto<-function(cmpd.DB){  
   #convert to SDFstr
@@ -79,10 +80,32 @@ SDF_tanimoto<-function(cmpd.DB){
 
 #' @title CID_tanimoto
 #' @param cid PubChem CID
-#' @import ChemmineR
-#' @details ... is passed to CID_SDF and SDF_tanimoto
+#' @import ChemmineR dplyr
+#' @details ... passed to CID_SDF
 #' @export
 CID_tanimoto<-function(cids,...){
   cmpd.DB<-CID_SDF(cids,...)
-  SDF_tanimoto(cmpd.DB,...)
+  SDF_tanimoto(cmpd.DB)
 } 
+
+#' @title CID_tanimoto
+#' @param mat adjacency matrix
+#' @param symmetric TRUE if undirected keep lower.tri
+#' @param diagonal TRUE to keep self-connections
+#' @param mat adjacency matrix
+#' @import reshape2
+#' @details convert adjacency matrix into an edge list
+#' @export
+adjacency_edgeList<-function(mat,symmetric=TRUE,diagonal=FALSE){
+  # bit of a hack around handling NA
+  mat<-as.matrix(mat)
+  id<-is.na(mat) # used to allow missing
+  mat[id]<-"nna"
+  if(symmetric){mat[lower.tri(mat)]<-"na"} # use to allow missing values
+  if(!diagonal){diag(mat)<-"na"}
+  obj<-melt(mat)
+  colnames(obj)<-c("source","target","value")
+  obj<-obj[!obj$value=="na",]
+  obj$value[obj$value=="nna"]<-NA
+  return(obj)
+}	

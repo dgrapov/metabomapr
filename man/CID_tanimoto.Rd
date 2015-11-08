@@ -13,6 +13,6 @@ CID_tanimoto(cids, ...)
 CID_tanimoto
 }
 \details{
-... is passed to CID_SDF and SDF_tanimoto
+... passed to CID_SDF
 }
 

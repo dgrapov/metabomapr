@@ -15,5 +15,15 @@ library("metabomapr")
 #### Convert PubChem CID to tanimoto similarity adjacency matrix
 ```{r,message=FALSE,warning=FALSE}
 cids<-c("[]","51", "440649","[]", "439161",  NA )
-CID_tanimoto(cids)
+(res<-CID_tanimoto(cids))
+```
+
+#### Convert adjacency matrix to an edge list
+```{r,message=FALSE,warning=FALSE}
+
+#extracted connections for an undirected an graph
+adjacency_edgeList(res)
+
+#full matrix
+adjacency_edgeList(res,symmetric=FALSE,diagonal=TRUE)
 ```
