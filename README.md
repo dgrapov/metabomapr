@@ -1,4 +1,6 @@
 
+### This is a work in progress of packaging **[MetaMapR](http://dgrapov.github.io/MetaMapR/)** functions.
+
 ### Install
 
 ```r

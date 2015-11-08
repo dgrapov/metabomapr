@@ -4,6 +4,8 @@ output:
     keep_md: yes
 ---
 
+### This is a work in progress of packaging **[MetaMapR](http://dgrapov.github.io/MetaMapR/)** functions.
+
 ### Install
 ```{r,message=FALSE,warning=FALSE}
 #devtools::install_github("dgrapov/metabomapr")
