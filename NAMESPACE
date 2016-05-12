@@ -2,6 +2,9 @@
 
 export(CID_tanimoto)
 export(adjacency_edgeList)
+export(convert_edgeIndex)
+export(get_KEGG_edgeList)
+export(get_KEGG_pairs)
 import(ChemmineR)
 import(dplyr)
 import(reshape2)

@@ -4,7 +4,7 @@
 \alias{CID_tanimoto}
 \title{CID_tanimoto}
 \usage{
-CID_tanimoto(cids, ...)
+CID_tanimoto(cids, as = c("adjacency", "edge.list"), ...)
 }
 \arguments{
 \item{cid}{PubChem CID}

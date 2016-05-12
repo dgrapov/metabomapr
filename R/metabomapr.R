@@ -83,9 +83,10 @@ SDF_tanimoto<-function(cmpd.DB){
 #' @import ChemmineR dplyr
 #' @details ... passed to CID_SDF
 #' @export
-CID_tanimoto<-function(cids,...){
+CID_tanimoto<-function(cids,as=c("adjacency","edge.list"),...){
   cmpd.DB<-CID_SDF(cids,...)
-  SDF_tanimoto(cmpd.DB)
+  res<-SDF_tanimoto(cmpd.DB)
+  if(as == 'edge.list') adjacency_edgeList(res) else res
 } 
 
 #' @title CID_tanimoto
@@ -109,3 +110,80 @@ adjacency_edgeList<-function(mat,symmetric=TRUE,diagonal=FALSE){
   obj$value[obj$value=="nna"]<-NA
   return(obj)
 }	
+
+#' @title get_KEGG_pairs
+#' @param type of return 'main' type of reactions or 'full' everything
+#' @param file RPAIRS list defaults to package data
+#' @export
+get_KEGG_pairs<-function(type="main",file=system.file("data/KEGG_RPAIRS", package = "metabomapr")){ 
+  
+  full<-read.table(file,sep="\t")
+  
+  if(type =="main"){
+    out<-full[agrep("main",full[,3]),1:2] # now will get all main types
+  } 
+
+  if(type =="full"){
+    out<-full
+  }  
+  return(as.matrix(out))
+}
+
+# #filter KEGG connections based on input
+# input<-c("C15973","C00026","C05381","C15972","C00091","C00042")
+# el<-get_KEGG_pairs()  
+# match_edgeList(input,el)
+
+#' @title get_KEGG_edgeList
+#' @param input vector of kegg ids
+#' @param el edge list of KEGG RPAIRs
+#' @import dplyr
+#' @export
+get_KEGG_edgeList<-function(input,el=get_KEGG_pairs()){
+  id<-as.character(el[,1]) %in% input  | as.character(el[,2]) %in% input
+  tmp<-el[id,,drop=FALSE]
+  res<-lapply(seq_along(input), function(i){
+    id<-tmp[,1] %in% input[i] | tmp[,2] %in% input[i]
+    tmp2<-tmp[id,,drop=FALSE]
+    # lapply(tmp2, function(x) {
+      tmp2[tmp2[,1] %in% input[-i] | tmp2[,2] %in% input[-i],]
+    # }) %>% do.call("rbind",.)
+  }) %>% do.call("rbind",.)
+  rownames(res)<-NULL
+  #TODO prevent duplicates above
+  id<-apply(res,1,paste, collapse="_")
+  res[!duplicated(id),]
+  #doesn't take care of superimposed
+}
+
+
+#create shared edgelist
+# db<-data.frame(ID=1:2,KEGG=c('C01416','C12448'),CID=c(4603,582838))
+# end<-'ID'
+# start<-'KEGG'
+# edge_list<-data.frame(source=c('C12448','C01416'),target=c('C01416','C12448'),weight=1)
+#convert_edgeIndex(edge_list,start,end,db)
+
+#' @title convert_edgeIndex
+#' @param edge_list matrix or data frame columns > 2 ignored
+#' @param start column name of index matching edge list
+#' @param end column name of index matching db
+#' @param db data.frame containing mapping between start and end
+#' @return edge list converted from start to end 
+#' @import dplyr
+#' @export 
+convert_edgeIndex<-function(edge_list,start,end,db){
+  
+    s<-setNames(edge_list[,1] %>% data.frame(),start) %>%
+      left_join(.,db,by=start) %>% .[,end,drop=FALSE]
+    t<-setNames(edge_list[,-1,drop=FALSE] %>% 
+      data.frame(),c(start,colnames(edge_list)[-c(1:2)])) %>%
+      left_join(.,db,by=start) %>% .[,c(end,colnames(edge_list)[-c(1:2)])]
+    
+    data.frame(s,t) %>%
+    setNames(.,c('source','target',colnames(edge_list)[-c(1:2)]))
+} 
+  
+  
+  
+  

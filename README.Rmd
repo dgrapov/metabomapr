@@ -4,28 +4,56 @@ output:
     keep_md: yes
 ---
 
-### This is a work in progress of packaging **[MetaMapR](http://dgrapov.github.io/MetaMapR/)** functions.
+### Metabolomic network edge list generation. Currently includes:
+* structural similarity
+* KEGG biochemical connections
+
+#### See [MetaMapR](http://dgrapov.github.io/MetaMapR/) for more features.
 
 ### Install
 ```{r,message=FALSE,warning=FALSE}
 #devtools::install_github("dgrapov/metabomapr")
 library("metabomapr")
 
+TCA.kegg <- c("C15973","C00026","C05381","C15972","C00091","C00042","C05379","C00311","C00036","C00024","C00149","C00417","C00158","C00022","C05125","C16254","C00122","C16255","C00074")
+TCA.names<-c('Enzyme N6-(dihydrolipoyl)lysine',	'2-Oxoglutarate',	'3-Carboxy-1-hydroxypropyl-ThPP',	'Enzyme N6-(lipoyl)lysine',	'Succinyl-CoA',	'Succinate',	'Oxalosuccinate',	'Isocitrate',	'Oxaloacetate',	'Acetyl-CoA',	'(S)-Malate',	'cis-Aconitate',	'Citrate',	'Pyruvate',	'2-(alpha-Hydroxyethyl)thiamine diphosphate',	'[Dihydrolipoyllysine-residue succinyltransferase] S-succinyldihydrolipoyllysine',	'Fumarate',	'[Dihydrolipoyllysine-residue acetyltransferase] S-acetyldihydrolipoyllysine',	'Phosphoenolpyruvate')
+TCA.CID <- c("[]","51", "440649","[]", "439161",   "1110",    "972",      "1198",     "970",      "6302",     "222656",   "643757",  "19782904", "1060",     "440568"  ,"[]", "21883788" ,"[]","1005" )
+main<-data.frame(id=1:length(TCA.kegg), KEGG=TCA.kegg,CID=TCA.CID,name=TCA.names)
 ```
 
 ### Examples
-#### Convert PubChem CID to tanimoto similarity adjacency matrix
+#### Convert PubChem CID to tanimoto similarity adjacency list
 ```{r,message=FALSE,warning=FALSE}
-cids<-c("[]","51", "440649","[]", "439161",  NA )
-(res<-CID_tanimoto(cids))
+cids<-main$CID
+res1<-CID_tanimoto(cids,as='edge.list')
+head(res1)
 ```
 
-#### Convert adjacency matrix to an edge list
+### get KEGG based biochemical connections
 ```{r,message=FALSE,warning=FALSE}
-
-#extracted connections for an undirected an graph
-adjacency_edgeList(res)
-
-#full matrix
-adjacency_edgeList(res,symmetric=FALSE,diagonal=TRUE)
+kegg<-main$KEGG
+res2<-get_KEGG_edgeList(kegg)
+head(res2)
 ```
+
+### combine KEGG and CID edge lists using a common index
+```{r,message=FALSE,warning=FALSE}
+library(dplyr)
+#main db
+head(main)
+main$CID<-main$CID %>% as.character() %>% as.numeric()
+cid_el<-res1 %>% 
+  convert_edgeIndex(.,start='CID',end='id',db=main) %>%
+  mutate(type="CID")
+
+head(cid_el)
+  
+kegg_el<-res2 %>% 
+  convert_edgeIndex(.,start='KEGG',end='id',db=main) %>%
+  mutate(value=1,type="KEGG")
+
+head(kegg_el)
+
+final_edgeList<-rbind(kegg_el,cid_el)
+```
+
