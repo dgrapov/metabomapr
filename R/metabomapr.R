@@ -152,7 +152,9 @@ get_KEGG_edgeList<-function(input,el=get_KEGG_pairs()){
   rownames(res)<-NULL
   #TODO prevent duplicates above
   id<-apply(res,1,paste, collapse="_")
-  res[!duplicated(id),]
+  res[!duplicated(id),] %>%
+    data.frame(.,stringsAsFactors = FALSE) %>%
+    setNames(.,c('source','target'))
   #doesn't take care of superimposed
 }
 
@@ -173,17 +175,58 @@ get_KEGG_edgeList<-function(input,el=get_KEGG_pairs()){
 #' @import dplyr
 #' @export 
 convert_edgeIndex<-function(edge_list,start,end,db){
-  
-    s<-setNames(edge_list[,1] %>% data.frame(),start) %>%
-      left_join(.,db,by=start) %>% .[,end,drop=FALSE]
-    t<-setNames(edge_list[,-1,drop=FALSE] %>% 
-      data.frame(),c(start,colnames(edge_list)[-c(1:2)])) %>%
-      left_join(.,db,by=start) %>% .[,c(end,colnames(edge_list)[-c(1:2)])]
     
-    data.frame(s,t) %>%
-    setNames(.,c('source','target',colnames(edge_list)[-c(1:2)]))
+    #convert source/target to character for join  
+    edge_list$source<-as.character(edge_list$source)
+    edge_list$target<-as.character(edge_list$target)
+    
+    s<-left_join(edge_list[,'source',drop=FALSE],db,by=c('source' = start)) %>%
+      select(one_of(end)) %>%
+      setNames(.,'source')
+    t<-left_join(edge_list[,'target',drop=FALSE],db,by=c('target' = start)) %>%
+      select(one_of(end)) %>%
+      setNames(.,'target')
+  
+    data.frame(s,t) 
 } 
   
+#' @title test_data
+#' @return biochemical demo data
+#' @export 
+test_data<-function(){
+  TCA.kegg <- c("C15973","C00026","C05381","C15972","C00091","C00042","C05379","C00311","C00036","C00024","C00149","C00417","C00158","C00022","C05125","C16254","C00122","C16255","C00074")
+  TCA.names<-c('Enzyme N6-(dihydrolipoyl)lysine',	'2-Oxoglutarate',	'3-Carboxy-1-hydroxypropyl-ThPP',	'Enzyme N6-(lipoyl)lysine',	'Succinyl-CoA',	'Succinate',	'Oxalosuccinate',	'Isocitrate',	'Oxaloacetate',	'Acetyl-CoA',	'(S)-Malate',	'cis-Aconitate',	'Citrate',	'Pyruvate',	'2-(alpha-Hydroxyethyl)thiamine diphosphate',	'[Dihydrolipoyllysine-residue succinyltransferase] S-succinyldihydrolipoyllysine',	'Fumarate',	'[Dihydrolipoyllysine-residue acetyltransferase] S-acetyldihydrolipoyllysine',	'Phosphoenolpyruvate')
+  TCA.CID <- c("[]","51", "440649","[]", "439161",   "1110",    "972",      "1198",     "970",      "6302",     "222656",   "643757",  "19782904", "1060",     "440568"  ,"[]", "21883788" ,"[]","1005" )
+  data.frame(id=paste0('N',1:length(TCA.kegg)), KEGG=TCA.kegg,CID=TCA.CID,name=TCA.names,stringsAsFactors=FALSE)
+}
+
+
+#dev and test  
+tests<-function(){
+  library("metabomapr")
   
+  #make sure main data inputs are character
+  main<-test_data() 
   
+  #### Convert PubChem CID to 
+  #tanimoto similarity adjacency list
+  type<-'CID'
+  id<-main[,type]
+  el<-CID_tanimoto(id,as='edge.list')
+  cid_el<- el %>%
+    convert_edgeIndex(.,start=type,end='id',db=main) %>%
+    data.frame(.,el %>% select(-source,-target),type=type)
+  
+  ### get KEGG based biochemical connections
+  type<-'KEGG'
+  id<-main[,type]
+  el<-get_KEGG_edgeList(id)
+  kegg_el<- el %>%
+    convert_edgeIndex(.,start=type,end='id',db=main) %>%
+    data.frame(.,el %>% select(-source,-target),value=1,type=type)
+  
+  #combined edge list
+  el<-rbind(kegg_el,cid_el)
+  
+}  
   

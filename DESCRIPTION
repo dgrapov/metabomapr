@@ -1,10 +1,14 @@
 Package: metabomapr
 Type: Package
 Title: R package for MetaboMapR
-Version: 1.0
-Date: 2015-11-07
+Version: 1.2
+Date: 2017-1-07
 Author: Dmitry Garpov
 Maintainer: <dgrapov@gmail.com>
-Description: Functions to implement metabolomic network generation workflows in MetaMapR.
-License: TBD
-Suggests: testthat
+Description: Tools for calculation of metabolomic networks
+Depends:
+  ChemmineR
+License: GPL-2
+Suggests:
+    testthat
+RoxygenNote: 5.0.1
