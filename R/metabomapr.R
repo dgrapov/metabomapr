@@ -34,8 +34,10 @@ CID_SDF<-function(cids,query.limit=25,DB=NULL,...){
   
   #validate inputs
   # make sure all are numeric
-  bad<-as.numeric(as.character(unlist(cids))) %>% is.na()
+  bad<-as.numeric(as.character(unlist(cids))) %>% is.na() 
   obj<-cids[!bad] %>% unique()
+  obj<-obj[as.numeric(as.character(unlist(obj))) > 0]
+  
   db_vals<-NULL
   #load from DB
   if(!is.null(DB)){
@@ -48,6 +50,7 @@ CID_SDF<-function(cids,query.limit=25,DB=NULL,...){
     db_vals<-.DB[names(.DB) %in% have]
     
     obj<-obj[!obj %in% have]
+  
   }
   
 
