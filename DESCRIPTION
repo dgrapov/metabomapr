@@ -7,7 +7,9 @@ Author: Dmitry Garpov
 Maintainer: <dgrapov@gmail.com>
 Description: Tools for calculation of metabolomic networks
 Depends:
-  ChemmineR
+  ChemmineR,
+  reshape2,
+  dplyr
 License: GPL-2
 Suggests:
     testthat

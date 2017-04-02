@@ -4,7 +4,7 @@
 \alias{CID_SDF}
 \title{CID_SDF}
 \usage{
-CID_SDF(cids, query.limit = 25, ...)
+CID_SDF(cids, query.limit = 25, DB = NULL, ...)
 }
 \arguments{
 \item{cid}{list of PubChem identifiers}

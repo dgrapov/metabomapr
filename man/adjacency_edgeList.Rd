@@ -2,7 +2,7 @@
 % Please edit documentation in R/metabomapr.R
 \name{adjacency_edgeList}
 \alias{adjacency_edgeList}
-\title{CID_tanimoto}
+\title{adjacency_edgeList}
 \usage{
 adjacency_edgeList(mat, symmetric = TRUE, diagonal = FALSE)
 }

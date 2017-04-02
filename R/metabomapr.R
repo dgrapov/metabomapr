@@ -1,7 +1,30 @@
+#' @title save_cid_db
+#' @export
+#' @details load CID fingerprint database
+save_cid_db<-function(.DB,new,path){
+  .id<-!names(new) %in% names(.DB) 
+  CID.SDF.DB<-c(.DB,new[.id])
+  save(CID.SDF.DB,file=path)
+}
+
+
+#' @title metabomapr_CID_DB
+#' @param  save_path path to save DB for future update
+#' @export
+metabomapr_CID_DB<-function(save_path=NULL){
+  file<-system.file('CID.SDF.DB',package='metabomapr')
+  load(file)
+  if(!is.null(save_path)){
+    save(CID.SDF.DB,file=paste0(save_path,'CID.SDF.DB'))
+  }
+  invisible(CID.SDF.DB)
+}
+
 #' @title CID_SDF
 #' @param cid list of PubChem identifiers
 #' @import dplyr ChemmineR 
-CID_SDF<-function(cids,query.limit=25,...){
+#' @export
+CID_SDF<-function(cids,query.limit=25,DB=NULL,...){
   
   #retrieve metabolite SDF from DB
   #DB should be a list with cids as names
@@ -9,30 +32,56 @@ CID_SDF<-function(cids,query.limit=25,...){
   #if update then update DB with cid entries
   #return list of SDF files for each cid
   
+  #validate inputs
   # make sure all are numeric
-  obj<-as.numeric(as.character(unlist(cids))) %>%
-    .[!duplicated(.)] %>% na.omit()
-
-   if(length(obj) == 0)  stop("Please supply valid input as numeric PubChem CIDs")
-  
-  #due to url string size limit query query.limit sdf obj at a time
-  blocks<-as.list(split(obj, ceiling(seq_along(1:length(obj))/query.limit)))
-  SDF<-lapply(1:length(blocks),function(i){
-    url<-paste0("http://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/",
-                     paste(blocks[[i]] %>% unlist(),collapse=","),"/SDF")
-    #format for output
-    tmp<-read_sdf(url) %>% unclass(.)
-    names(tmp)<-blocks[[i]]
-    return(tmp)
-  }) 
-  
-  #need to flatten list and name as cid from: http://stackoverflow.com/questions/19734412/flatten-nested-list-into-1-deep-list
-  flatlist <- function(mylist){
-    lapply(rapply(mylist, enquote, how="unlist"), eval)
+  bad<-as.numeric(as.character(unlist(cids))) %>% is.na()
+  obj<-cids[!bad] %>% unique()
+  db_vals<-NULL
+  #load from DB
+  if(!is.null(DB)){
+    message('Loading CID DB')
+    load(DB) #CID.SDF.DB
+    .DB<-CID.SDF.DB
+    
+    #check query against DB
+    have<-intersect(names(.DB),obj)
+    db_vals<-.DB[names(.DB) %in% have]
+    
+    obj<-obj[!obj %in% have]
   }
   
-  #
- flatlist(SDF)
+
+  if(length(obj)> 0)  { #stop("Please supply valid input as numeric PubChem CIDs")
+  
+    message('Retrieving CID fingerprints from http://pubchem.ncbi.nlm.nih.gov')
+    #due to url string size limit query query.limit sdf obj at a time
+    blocks<-as.list(split(obj, ceiling(seq_along(1:length(obj))/query.limit)))
+    SDF<-lapply(1:length(blocks),function(i){
+      url<-paste0("http://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/",
+                       paste(blocks[[i]] %>% unlist(),collapse=","),"/SDF")
+      #format for output
+      tmp<-read_sdf(url) %>% unclass(.)
+      names(tmp)<-blocks[[i]]
+      return(tmp)
+    }) 
+    
+    #need to flatten list and name as cid from: http://stackoverflow.com/questions/19734412/flatten-nested-list-into-1-deep-list
+    flatlist <- function(mylist){
+      lapply(rapply(mylist, enquote, how="unlist"), eval)
+    }
+    
+    #
+   res<-flatlist(SDF)
+  } else {
+    res<-NULL
+  }
+ #save
+ if(!is.null(DB) && !is.null(res)){
+   message('Saving CID DB')
+   save_cid_db(.DB,res,DB)
+ }
+  
+  return(c(res,db_vals))
    
 }  
 
@@ -89,7 +138,7 @@ CID_tanimoto<-function(cids,as=c("adjacency","edge.list"),...){
   if(as == 'edge.list') adjacency_edgeList(res) else res
 } 
 
-#' @title CID_tanimoto
+#' @title adjacency_edgeList
 #' @param mat adjacency matrix
 #' @param symmetric TRUE if undirected keep lower.tri
 #' @param diagonal TRUE to keep self-connections
@@ -176,13 +225,25 @@ get_KEGG_edgeList<-function(input,el=get_KEGG_pairs()){
 #' @export 
 convert_edgeIndex<-function(edge_list,start,end,db){
     
-    #convert source/target to character for join  
-    edge_list$source<-as.character(edge_list$source)
-    edge_list$target<-as.character(edge_list$target)
+  
+    #convert source/target to character for join # TODO fix naming
+    edge_list$source<-as.character(edge_list[,1])#as.character(edge_list$source)
+    edge_list$target<-as.character(edge_list[,2])#as.character(edge_list$target)
     
+    #remove items not in db
+    ns<-!edge_list$source %in% db[[start]]
+    nt<-!edge_list$target %in% db[[start]]
+    
+    #the data base needs to be unique with regards to start
+    db[[start]]<-make.unique(db[[start]] %>% as.character())
+    
+    #edge_list may have edges not in the db
     s<-left_join(edge_list[,'source',drop=FALSE],db,by=c('source' = start)) %>%
       select(one_of(end)) %>%
       setNames(.,'source')
+    
+
+    
     t<-left_join(edge_list[,'target',drop=FALSE],db,by=c('target' = start)) %>%
       select(one_of(end)) %>%
       setNames(.,'target')
@@ -205,6 +266,11 @@ test_data<-function(){
 tests<-function(){
   library("metabomapr")
   
+  #add CID saving to DB
+  
+  DB<-'inst/CID.SDF.DB'
+
+  
   #make sure main data inputs are character
   main<-test_data() 
   
@@ -212,7 +278,18 @@ tests<-function(){
   #tanimoto similarity adjacency list
   type<-'CID'
   id<-main[,type]
-  el<-CID_tanimoto(id,as='edge.list')
+  
+  id<-c('5793','9561016')
+  #add mechanism to look in DB for CID fingerprints
+  #
+  
+  el<-CID_tanimoto(id,as='edge.list',DB=DB)
+  
+ 
+  
+  DB<-system.file('CID.SDF.DB',package='metabomapr')
+  el<-CID_tanimoto(id,as='edge.list',DB=DB)
+  
   cid_el<- el %>%
     convert_edgeIndex(.,start=type,end='id',db=main) %>%
     data.frame(.,el %>% select(-source,-target),type=type)
@@ -228,5 +305,28 @@ tests<-function(){
   #combined edge list
   el<-rbind(kegg_el,cid_el)
   
+  
+  #cerebro data test
+  library(cerebro.pathway)
+  data("aq_data_stat")
+  
+  data<-aq_data_stat
+  data$id<-paste0("N",1:nrow(data))
+  keggcolumn<-'KeggID'
+  
+  #need to remove empty
+  id<-is.na(data[[keggcolumn]]) | data[[keggcolumn]] =="" 
+  
+  data<-data[!id,]
+  #kegg edges
+  id<-data[[keggcolumn]]
+  el<-get_KEGG_edgeList(id)
+  kegg_el<- el %>%
+    convert_edgeIndex(.,start=keggcolumn,end='id',db=data) %>%
+    data.frame(.,el %>% select(-source,-target),value=1,type=type)
+  
+  #test
+  input<-c("C02530", "C08362", "C09873", "C00712", "C00157", "C07635", 
+           "C00712", "C02530", "C01595", "C06427")
 }  
   
