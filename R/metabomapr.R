@@ -89,13 +89,18 @@ CID_SDF<-function(cids,query.limit=25,DB=NULL,...){
 }  
 
 #' @title read_sdf
+#' @import httr
 read_sdf<-function (sdfstr) {
   
   #number of queries controlled in url
   if (length(sdfstr) > 1) {
     mysdf <- sdfstr
   } else {
-    mysdf <- readLines(sdfstr)
+    # mysdf <- readLines(sdfstr) # errors on a mac?
+    mysdf<-GET(sdfstr) %>% content() %>%
+      rawToChar() %>%
+      strsplit(.,'\n') %>%
+      unlist()
   }
   
   y <- regexpr("^\\${4,4}", mysdf, perl = TRUE)
@@ -286,7 +291,7 @@ tests<-function(){
   #add mechanism to look in DB for CID fingerprints
   #
   
-  el<-CID_tanimoto(id,as='edge.list',DB=DB)
+  el<-CID_tanimoto(id,as='edge.list',DB=NULL)
   
  
   
