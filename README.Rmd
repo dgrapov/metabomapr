@@ -58,6 +58,30 @@ el<-rbind(kegg_el,cid_el)
 head(el)
 ```
 
+## Using opencpu API
+
+Define server
+```
+options('open_cpu_url' = 'http://localhost/ocpu/')
+options('metabomapr_url' = 'library/metabomapr/R/' )
+```
+
+Make call using simple [opencpuclient](https://github.com/dgrapov/ocpuclient)
+```
+library(ocpuclient)
+type<-'CID'
+id<-main[,type]
+
+body<-list(type=type,cids=id,as='edge.list')
+
+fun<-'CID_tanimoto'
+
+x<-ocpuclient:::ocpu_post(fun,body=body,pkg_url = getOption('metabomapr_url'), base_url=getOption('open_cpu_url'))
+
+x$results 
+```
+
+
 ### About
 * contact: createdatasol@gmail.com
 * updated: `r Sys.Date()`

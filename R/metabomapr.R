@@ -1,7 +1,7 @@
 #' @title save_cid_db
 #' @export
 #' @details load CID fingerprint database
-save_cid_db<-function(.DB,new,path){
+save_cid_db<-function(.DB=NULL,new,path){
   .id<-!names(new) %in% names(.DB) 
   CID.SDF.DB<-c(.DB,new[.id])
   save(CID.SDF.DB,file=path)
@@ -15,7 +15,7 @@ metabomapr_CID_DB<-function(save_path=NULL){
   file<-system.file('CID.SDF.DB',package='metabomapr')
   load(file)
   if(!is.null(save_path)){
-    save(CID.SDF.DB,file=paste0(save_path,'CID.SDF.DB'))
+    save(CID.SDF.DB,file=paste0(save_path,'CID.SDF.DB')) # save_path)#
   }
   invisible(CID.SDF.DB)
 }
@@ -40,7 +40,7 @@ CID_SDF<-function(cids,query.limit=25,DB=NULL,...){
   
   db_vals<-NULL
   #load from DB
-  if(!is.null(DB)){
+  if(!is.null(DB) && file.exists(DB)){
     message('Loading CID DB')
     load(DB) #CID.SDF.DB
     .DB<-CID.SDF.DB
@@ -51,6 +51,8 @@ CID_SDF<-function(cids,query.limit=25,DB=NULL,...){
     
     obj<-obj[!obj %in% have]
   
+  } else {
+    .DB<-NULL
   }
   
 
@@ -165,6 +167,7 @@ adjacency_edgeList<-function(mat,symmetric=TRUE,diagonal=FALSE){
   colnames(obj)<-c("source","target","value")
   obj<-obj[!obj$value=="na",]
   obj$value[obj$value=="nna"]<-NA
+  obj$value<-as.numeric(as.character(obj$value)) #why is this a factor?
   return(obj)
 }	
 
@@ -197,6 +200,7 @@ get_KEGG_pairs<-function(type="main",file=system.file("data/KEGG_RPAIRS", packag
 #' @import dplyr
 #' @export
 get_KEGG_edgeList<-function(input,el=get_KEGG_pairs()){
+  input<-unique(input)# fix why dupes will lead to wrong edegs - 
   id<-as.character(el[,1]) %in% input  | as.character(el[,2]) %in% input
   tmp<-el[id,,drop=FALSE]
   res<-lapply(seq_along(input), function(i){
@@ -247,14 +251,17 @@ convert_edgeIndex<-function(edge_list,start,end,db){
     
     #edge_list may have edges not in the db
     s<-left_join(edge_list[,'source',drop=FALSE],db,by=c('source' = start)) %>%
-      select(one_of(end)) %>%
+      select(end) %>%
       setNames(.,'source')
     
 
     
     t<-left_join(edge_list[,'target',drop=FALSE],db,by=c('target' = start)) %>%
-      select(one_of(end)) %>%
+      select(end) %>%
       setNames(.,'target')
+      
+      #select(one_of(end)) %>%
+      #setNames(.,'target')
   
     data.frame(s,t) 
 } 
