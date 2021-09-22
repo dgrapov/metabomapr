@@ -1,3 +1,8 @@
+---
+output:
+  html_document:
+    keep_md: yes
+---
 
 > Metabolomic network edge list generation
 
@@ -42,13 +47,13 @@ head(cid_el)
 ```
 
 ```
-##    source target             value
-## 16     51 440649 0.158469945355191
-## 31     51 439161 0.171122994652406
-## 32 440649 439161 0.646788990825688
-## 46     51   1110 0.702702702702703
-## 47 440649   1110 0.146892655367232
-## 48 439161   1110 0.147540983606557
+##    source target     value
+## 16     51 440649 0.1584699
+## 31     51 439161 0.1711230
+## 32 440649 439161 0.6467890
+## 46     51   1110 0.7027027
+## 47 440649   1110 0.1468927
+## 48 439161   1110 0.1475410
 ```
 
 ### get KEGG based biochemical connections
@@ -98,6 +103,30 @@ head(el)
 ## 6     N2     N3     1 KEGG
 ```
 
+## Using opencpu API
+
+Define server
+```
+options('open_cpu_url' = 'http://localhost/ocpu/')
+options('metabomapr_url' = 'library/metabomapr/R/' )
+```
+
+Make call using simple [opencpuclient](https://github.com/dgrapov/ocpuclient)
+```
+library(ocpuclient)
+type<-'CID'
+id<-main[,type]
+
+body<-list(type=type,cids=id,as='edge.list')
+
+fun<-'CID_tanimoto'
+
+x<-ocpuclient:::ocpu_post(fun,body=body,pkg_url = getOption('metabomapr_url'), base_url=getOption('open_cpu_url'))
+
+x$results 
+```
+
+
 ### About
 * contact: createdatasol@gmail.com
-* updated: 2017-01-07
+* updated: 2021-09-21
