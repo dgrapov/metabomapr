@@ -6,6 +6,16 @@ output:
 
 > Metabolomic network edge list generation
 
+### Install
+```
+if (!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+BiocManager::install("ChemmineR")
+
+devtools::install_github('dgrapov/metabomapr')
+```
+
 ### Supported connections:
 * structural similarity based on [pubChem CID](https://pubchem.ncbi.nlm.nih.gov/)
 * biochemical connections based on [KEGG](http://www.genome.jp/kegg/)
@@ -128,5 +138,5 @@ x$results
 
 
 ### About
-* contact: createdatasol@gmail.com
-* updated: 2021-09-21
+* contact: dmitry@creative-data.solutions
+* updated: 2022-11-04

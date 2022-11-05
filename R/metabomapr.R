@@ -24,7 +24,7 @@ metabomapr_CID_DB<-function(save_path=NULL){
 #' @param cid list of PubChem identifiers
 #' @import dplyr ChemmineR 
 #' @export
-CID_SDF<-function(cids,query.limit=25,DB=NULL,...){
+CID_SDF<-function(cids,query.limit=1,DB=NULL,...){
   
   #retrieve metabolite SDF from DB
   #DB should be a list with cids as names
@@ -42,7 +42,7 @@ CID_SDF<-function(cids,query.limit=25,DB=NULL,...){
   #load from DB
   if(!is.null(DB) && file.exists(DB)){
     message('Loading CID DB')
-    load(DB) #CID.SDF.DB
+    load(DB) 
     .DB<-CID.SDF.DB
     
     #check query against DB
@@ -64,8 +64,10 @@ CID_SDF<-function(cids,query.limit=25,DB=NULL,...){
     SDF<-lapply(1:length(blocks),function(i){
       url<-paste0("http://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/",
                        paste(blocks[[i]] %>% unlist(),collapse=","),"/SDF")
+      
       #format for output
       tmp<-read_sdf(url) %>% unclass(.)
+      
       names(tmp)<-blocks[[i]]
       return(tmp)
     }) 
@@ -75,8 +77,10 @@ CID_SDF<-function(cids,query.limit=25,DB=NULL,...){
       lapply(rapply(mylist, enquote, how="unlist"), eval)
     }
     
-    #
-   res<-flatlist(SDF)
+   #omit NA SDF which are PUG 404s
+   bad<-lapply(SDF,is.na) %>% unlist()
+  
+   res<-flatlist(SDF[!bad])
   } else {
     res<-NULL
   }
@@ -92,38 +96,45 @@ CID_SDF<-function(cids,query.limit=25,DB=NULL,...){
 
 #' @title read_sdf
 #' @import httr
-read_sdf<-function (sdfstr) {
-  
+read_sdf <- function (sdfstr) {
   #number of queries controlled in url
   if (length(sdfstr) > 1) {
     mysdf <- sdfstr
   } else {
     # mysdf <- readLines(sdfstr) # errors on a mac?
-    mysdf<-GET(sdfstr) %>% content() %>%
-      rawToChar() %>%
-      strsplit(.,'\n') %>%
-      unlist()
+    #gate for errors
+    mysdf <- GET(sdfstr)
+    
+    if (mysdf$status != '404') {
+      mysdf <- mysdf %>% content() %>%
+        rawToChar() %>%
+        strsplit(., '\n') %>%
+        unlist()
+    } else {
+    
+     return(list(NA)) 
+    }
   }
   
   y <- regexpr("^\\${4,4}", mysdf, perl = TRUE)
   index <- which(y != -1)
-  indexDF <- data.frame(start = c(1, index[-length(index)] + 
+  indexDF <- data.frame(start = c(1, index[-length(index)] +
                                     1), end = index)
-  mysdf_list <- lapply(seq(along = indexDF[, 1]), function(x) mysdf[seq(indexDF[x, 
-                                                                                1], indexDF[x, 2])])
+  mysdf_list <-
+    lapply(seq(along = indexDF[, 1]), function(x)
+      mysdf[seq(indexDF[x,
+                        1], indexDF[x, 2])])
   if (class(mysdf_list) != "list") {
     mysdf_list <- list(as.vector(mysdf_list))
   }
   names(mysdf_list) <- 1:length(mysdf_list)
-  #mysdf_list <- new("SDFstr", a = mysdf_list)
+  
   return(mysdf_list)
 }
 
 #' @import ChemmineR
 SDF_tanimoto<-function(cmpd.DB){  
-  #convert to SDFstr
-  #depends on ChemmineR 
-  require(ChemmineR)
+  
   cmpd.sdf.list<-new("SDFstr", a = cmpd.DB)
   sd.list<-as(cmpd.sdf.list, "SDFset")
   cid(sd.list) <- sdfid(sd.list)
@@ -286,6 +297,10 @@ tests<-function(){
   DB<-'inst/CID.SDF.DB'
 
   
+  #debug invalid CID SDF
+  cids<-c(254741343,51, 440649)
+  x<-CID_SDF(cids,query.limit=1,DB=NULL)
+  CID_tanimoto(cids,as="edge.list",query.limit=25)
   #make sure main data inputs are character
   main<-test_data() 
   
@@ -294,7 +309,7 @@ tests<-function(){
   type<-'CID'
   id<-main[,type]
   
-  id<-c('5793','9561016')
+  id<-c(254741343,90658391)#c('5793','9561016')
   #add mechanism to look in DB for CID fingerprints
   #
   
